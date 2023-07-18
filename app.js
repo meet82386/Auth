@@ -3,8 +3,8 @@ require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
-const mongoose = require("mongoose")
-const encrypt = require("mongoose-encryption");
+const mongoose = require("mongoose");
+const md5 = require("md5");
 
 const app = express()
 
@@ -21,8 +21,8 @@ const userSchema = new mongoose.Schema({
     password: String
 });
 
-// Apply secret always before making model.
-userSchema.plugin(encrypt, { secret : process.env.SECRET, encryptedFields: ["password"] });
+// // Apply secret always before making model.
+// userSchema.plugin(encrypt, { secret : process.env.SECRET, encryptedFields: ["password"] });
 
 const User = new mongoose.model("User", userSchema);
 
@@ -42,7 +42,7 @@ app.get("/register", function(req, res) {
 app.post("/register",  function(req, res) {
     const newUser = new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password)
     });
     try {
         newUser.save();
@@ -59,7 +59,7 @@ app.post("/login", async function(req, res) {
 
     try {
         let mail = req.body.username;
-        let pwd = req.body.password;
+        let pwd = md5(req.body.password);
 
         // mongoose-encrypt will automatically decrypts the password here
         const person = await User.findOne({ 'email' : mail});
