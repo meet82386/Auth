@@ -4,7 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
 
 const app = express()
 
@@ -39,17 +39,21 @@ app.get("/register", function(req, res) {
 });
 
 // When user registers the post request is sent to "/register" route
+let saltRounds = 10;
 app.post("/register",  function(req, res) {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
+
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash){
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        });
+        try {
+            newUser.save();
+            res.render("secrets");
+        } catch (err) {
+            console.log(err);
+        };
     });
-    try {
-        newUser.save();
-        res.render("secrets");
-    } catch (err) {
-        console.log(err);
-    };
 
 });
 
@@ -59,16 +63,18 @@ app.post("/login", async function(req, res) {
 
     try {
         let mail = req.body.username;
-        let pwd = md5(req.body.password);
+        let pwd = req.body.password;
 
         // mongoose-encrypt will automatically decrypts the password here
         const person = await User.findOne({ 'email' : mail});
         if (person !== null) {
-            if (pwd === person.password) {
-                res.render("secrets");
-            } else {
-                console.log("Incorrect password");
-            }
+            bcrypt.compare(pwd, person.password, function (err, result) {
+                if(result === true) {
+                    res.render("secrets");
+                } else {
+                    console.log("Incorrect password");
+                }
+            })
         } else {
             console.log("No user found.")
         }
